@@ -1,0 +1,361 @@
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+import json
+import os
+import sys
+
+class SaveEditorGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Silk Song Save Editor")
+        self.root.geometry("700x1100")
+        self.root.configure(bg="#4a4a4a")  # Dark gray background
+
+        # Style configuration for modern design
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("TLabel", font=("Helvetica", 10), padding=5)
+        style.configure("TCheckbutton", font=("Helvetica", 9), padding=2)
+        style.configure("TButton", font=("Helvetica", 10, "bold"), padding=8)
+        style.configure("TFrame", background="#f0f0f0")  # Frames remain light gray
+        style.configure("TNotebook", background="#f0f0f0")
+        style.configure("TLabelFrame", background="#f0f0f0", font=("Helvetica", 11, "bold"))
+
+        # Variables
+        self.save_data = {}
+        self.filename = ""
+        self.output_filename = ""
+        self.enemy_kill_data = {}
+        self.file_type = None
+
+        # Initial upload prompt
+        self.upload_frame = ttk.Frame(root, padding="20", style="TFrame")
+        self.upload_frame.pack(fill="both", expand=True)
+        ttk.Label(self.upload_frame, text="Upload your save file to begin:", font=("Helvetica", 12, "bold")).pack(pady=10)
+        ttk.Button(self.upload_frame, text="Browse Files", command=self.load_initial_save).pack(pady=10)
+
+        # Main content with scrollbar
+        self.main_frame = ttk.Frame(root, padding="20", style="TFrame")
+        self.canvas = tk.Canvas(self.main_frame, bg="#4a4a4a", highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(self.main_frame, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas, style="TFrame")
+
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        # Configure the canvas and scrollbar
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.main_frame.pack(fill="both", expand=True)
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+
+        # Main content frames
+        self.ach_frame = ttk.LabelFrame(self.scrollable_frame, text="Achievements", padding="10")
+        self.quest_frame = ttk.LabelFrame(self.scrollable_frame, text="Quests", padding="10")
+        self.add_tools_frame = ttk.LabelFrame(self.scrollable_frame, text="Add Tools", padding="10")  # Original journal entries
+        self.journal_frame = ttk.LabelFrame(self.scrollable_frame, text="Journal", padding="10")  # New tab for enemy kill data
+        self.stats_frame = ttk.LabelFrame(self.scrollable_frame, text="Player Stats", padding="10")
+        self.text_frame = ttk.LabelFrame(self.scrollable_frame, text="Save Data Viewer", padding="10")
+        self.button_frame = ttk.Frame(self.scrollable_frame)
+
+        self.ach_vars = {}
+        self.quest_vars = {}
+        self.add_tools_vars = {}
+        self.journal_vars = {}
+        self.stats_vars = {
+            "health": tk.StringVar(value="99"),
+            "maxHealth": tk.StringVar(value="99"),
+            "geo": tk.StringVar(value="999999"),
+            "silk": tk.StringVar(value="3"),
+            "silkMax": tk.StringVar(value="9")
+        }
+
+    def load_initial_save(self):
+        self.filename = filedialog.askopenfilename(filetypes=[("DAT files", "*.dat")])
+        if not self.filename:
+            return
+        try:
+            with open(self.filename, 'r', encoding='utf-8') as file:
+                self.save_data = json.load(file)
+            self.upload_frame.pack_forget()
+            self.main_frame.pack(fill="both", expand=True)
+            self.setup_ui()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load save: {str(e)}. Ensure it's a valid .dat file.")
+
+    def setup_ui(self):
+        self.file_type = "user" if "playerData" in self.save_data else "shared"
+
+        # Achievements
+        self.ach_frame.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+        self.load_achievements()
+
+        if self.file_type == "user":
+            # Quests
+            self.quest_frame.grid(row=1, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            self.load_quests()
+
+            # Add Tools (original journal entries)
+            self.add_tools_frame.grid(row=2, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            self.load_add_tools()
+
+            # Journal (enemy kill data)
+            self.journal_frame.grid(row=3, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            self.load_journal()
+
+            # Stats
+            self.stats_frame.grid(row=4, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            for i, (label, var) in enumerate(self.stats_vars.items()):
+                ttk.Label(self.stats_frame, text=f"{label.replace('Max', 'Max ').title()}:").grid(row=i, column=0, padx=10, pady=5, sticky=tk.E)
+                ttk.Entry(self.stats_frame, textvariable=var, width=15).grid(row=i, column=1, padx=10, pady=5, sticky=tk.W)
+                var.set(str(self.save_data.get("playerData", {}).get(label, var.get())))
+
+            # Text Viewer
+            self.text_frame.grid(row=5, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            self.text_view = tk.Text(self.text_frame, height=10, width=70, font=("Helvetica", 9))
+            self.text_view.grid(row=0, column=0, padx=5, pady=5)
+            self.text_view.insert(tk.END, json.dumps(self.save_data, indent=2))
+
+            # Buttons
+            self.button_frame.grid(row=6, column=0, padx=10, pady=10, sticky=(tk.E))
+            ttk.Button(self.button_frame, text="Load Save (.dat)", command=self.load_save).grid(row=0, column=0, padx=5)
+            ttk.Button(self.button_frame, text="Set All Tools Complete", command=self.set_all_tools_complete).grid(row=0, column=1, padx=5)
+            ttk.Button(self.button_frame, text="Set All Journal Complete", command=self.set_all_journal_complete).grid(row=0, column=2, padx=5)
+            ttk.Button(self.button_frame, text="Save as New .txt", command=self.save_changes).grid(row=0, column=3, padx=5)
+            ttk.Button(self.button_frame, text="Exit", command=root.quit).grid(row=0, column=4, padx=5)
+        else:  # shared.dat
+            self.text_frame.grid(row=1, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            self.text_view = tk.Text(self.text_frame, height=10, width=70, font=("Helvetica", 9))
+            self.text_view.grid(row=0, column=0, padx=5, pady=5)
+            self.text_view.insert(tk.END, json.dumps({k: v for k, v in self.save_data.items() if k.startswith("HollowKnight.Achievement")}, indent=2))
+
+        self.scrollable_frame.update_idletasks()
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def load_achievements(self):
+        achievements = [
+            "FIRST_TOOL", "ALL_TOOLS", "FIRST_SILK_SKILL", "ALL_SILK_SKILLS", "FIRST_CREST", "ALL_CRESTS",
+            "FIRST_MASK", "ALL_MASKS", "FIRST_SILK_SPOOL", "ALL_SILK_SPOOLS", "ALL_SILK_HEARTS", "ALL_MAPS",
+            "BELLWAYS_FULL", "BELLWAY_MELODY", "TUBES_FULL", "JOURNAL_HALF", "JOURNAL_FULL", "FLEAS_HALF",
+            "FLEAS_ALL", "DEFEATED_BELLBEAST", "DEFEATED_LACE_1", "DEFEATED_SONG_GOLEM", "DEFEATED_WIDOW",
+            "DEFEATED_LAST_JUDGE_1", "DEFEATED_COGWORK_DANCERS", "DEFEATED_TROBBIO", "DEFEATED_LACE_2",
+            "DEFEATED_PHANTOM_1", "DEFEATED_FIRST_SINNER", "DEFEATED_CORAL_KING", "DEFEATED_FLOWER_QUEEN",
+            "DEFEATED_HUNTER_QUEEN", "DEFEATED_GREEN_PRINCE", "FIRST_WISH", "GOURMAND_WISH", "SHAKRA_FINAL_QUEST",
+            "GARMOND_FINAL_QUEST", "PINSTRESS_WISH", "EVA_FINAL_QUEST", "BELLHOME", "CITADEL_SONG",
+            "WHITE_FLOWER_GAINED", "ENDING_A", "ENDING_C", "ENDING_D", "ENDING_E", "HERALD_WISH", "COMPLETION",
+            "SPEEDRUN_1", "SPEED_COMPLETION", "STEEL_SOUL", "STEEL_SOUL_FULL"
+        ]
+        for i, ach in enumerate(achievements):
+            var = tk.BooleanVar(value=False)
+            self.ach_vars[ach] = var
+            full_key = f"HollowKnight.Achievement.{ach}.IsAchieved"
+            var.set(self.save_data.get(full_key, "0") == "1")
+            ttk.Checkbutton(self.ach_frame, text=ach.replace("_", " ").title(), variable=var).grid(
+                row=i // 2, column=i % 2, padx=5, pady=2, sticky=tk.W
+            )
+
+    def load_quests(self):
+        quests = [
+            "shermaQuestActive", "shermaHealerActive", "mapperRosaryConvo", "mapperMentorConvo", "mapperQuillConvo",
+            "mapperMappingConvo", "mapperCalledConvo", "mapperHauntedBellhartConvo", "mapperBellhartConvo",
+            "mapperTubeConvo", "mapperBrokenBenchConvo", "mapperCursedConvo", "mapperMaggottedConvo",
+            "mapperSellingTubePins", "mapperMasterAfterConvo", "druidTradeIntro", "dicePilgrimDefeated",
+            "garmondMoorwingConvo", "garmondPurposeConvo", "garmondFinalQuestReady", "pilgrimRestMerchant_SingConvo",
+            "nuuIntroAct3", "gillyIntroduced", "ShakraFinalQuestAppear"
+        ]
+        for i, quest in enumerate(quests):
+            var = tk.BooleanVar(value=False)
+            self.quest_vars[quest] = var
+            var.set(self.save_data.get("playerData", {}).get(quest, False))
+            ttk.Checkbutton(self.quest_frame, text=quest.replace("_", " ").title(), variable=var).grid(
+                row=i // 2, column=i % 2, padx=5, pady=2, sticky=tk.W
+            )
+
+    def load_add_tools(self):
+        # Original journal entries
+        journal_entries = [
+            "hasJournal", "seenJournalMsg", "seenMateriumMsg", "seenJournalQuestUpdateMsg", "HasSeenMapUpdated",
+            "HasSeenMapMarkerUpdated", "HasMossGrottoMap", "HasWildsMap", "HasBoneforestMap", "HasDocksMap",
+            "HasGreymoorMap", "HasBellhartMap", "HasShellwoodMap", "HasCrawlMap", "HasHuntersNestMap",
+            "HasJudgeStepsMap", "HasDustpensMap", "HasSlabMap", "HasPeakMap", "HasCitadelUnderstoreMap",
+            "HasCoralMap", "HasSwampMap", "HasCloverMap", "HasAbyssMap", "HasHangMap", "HasSongGateMap",
+            "HasHallsMap", "HasWardMap", "HasCogMap", "HasLibraryMap", "HasCradleMap", "HasArboriumMap",
+            "HasAqueductMap", "HasWeavehomeMap", "act3MapUpdated"
+        ]
+        for i, entry in enumerate(journal_entries):
+            var = tk.BooleanVar(value=False)
+            self.add_tools_vars[entry] = var
+            var.set(self.save_data.get("playerData", {}).get(entry, False))
+            ttk.Checkbutton(self.add_tools_frame, text=entry.replace("_", " ").title(), variable=var).grid(
+                row=i // 2, column=i % 2, padx=5, pady=2, sticky=tk.W
+            )
+
+    def load_journal(self):
+        # Full list of enemies from the provided example
+        enemy_names = [
+            "MossBone Crawler", "MossBone Fly", "Bone Roller", "Mossbone Mother", "Bone Goomba",
+            "Bone Goomba Large", "Bone Flyer", "Bone Circler", "Pilgrim 03", "Pilgrim 01",
+            "Aspid Collector", "Pilgrim Moss Spitter", "Bone Beast", "Bone Crawler", "Pilgrim Fly",
+            "Pilgrim StaffWielder", "Dock Worker", "Dock Flyer", "Bone Hopper", "Bone Hunter Buzzer",
+            "Bone Hunter Tiny", "Bone Hunter Child", "Shield Dock Worker", "Tar Slug", "Lace",
+            "Fields Flock Flyers", "Fields Goomba", "Bone Hunter Throw", "Fields Flyer", "Bone Circler Vicious",
+            "Dock Bomber", "Spine Floater", "Pilgrim 04", "Pilgrim 02", "Song Golem", "Pilgrim Bell Thrower",
+            "Farmer Catcher", "Crow", "Farmer Centipede", "Mitefly", "Farmer Scissors", "Mite", "Gnat Giant",
+            "Crowman", "Crowman Dagger", "Pond Skater", "Pilgrim Fisher", "Shellwood Gnat", "Shellwood Wasp",
+            "Flower Drifter", "Stick Insect Charger", "Stick Insect", "Bloom Shooter", "Rosary Pilgrim",
+            "Stick Insect Flyer", "Splinter Queen", "Bloom Puncher", "Bell Goomba", "Bell Fly",
+            "Pilgrim Bellthrower Fly", "Bone Worm", "Roof Crab", "Crypt Worm", "Spinner Boss",
+            "Roachfeeder Short", "Dustroach", "Roachfeeder Tall", "Roachkeeper", "Swamp Mosquito",
+            "Swamp Goomba", "Rosary Thief", "Swamp Muckman", "Slab Fly Large", "Wraith", "Bloat Roach",
+            "Swamp Drifter", "Dustroach Pollywog", "Swamp Muckman Tall", "Swamp Shaman", "Swamp Ductsucker",
+            "Swamp Barnacle", "Rock Roller", "Bone Hunter", "Bone Hunter Fly", "Bone Flyer Giant",
+            "Bone Spitter", "Coral Judge", "Blade Spider", "Pilgrim Hiker", "Coral Conch Shooter",
+            "Coral Conch Driller Giant", "Last Judge", "Understore Thrower", "Understore Poker",
+            "Understore Small", "Pilgrim 03 Understore", "Mite Heavy", "Understore Heavy",
+            "Pilgrim Staff Understore", "Citadel Bat", "Song Pilgrim 01", "Song Reed", "Pilgrim 01 Song",
+            "Song Pilgrim 03", "Pilgrim 03 Song", "Pilgrim 04 Song", "Song Automaton Fly", "Pilgrim 02 Song",
+            "Pilgrim Stomper Song", "Song Reed Grand", "Clockwork Dancer", "Song Threaded Husk",
+            "Song Creeper", "Understore Mite Giant", "Understore Automaton", "Understore Automaton EX",
+            "Slab Fly Mid", "Slab Fly Small", "Slab Prisoner Leaper New", "Song Handmaiden",
+            "Song Pilgrim Maestro", "Song Administrator", "Song Heavy Sentry", "Song Automaton 01",
+            "Song Automaton Goomba", "Song Automaton Fly Spike", "Song Automaton 02", "Song Automaton Shield",
+            "Song Automaton Ball", "Scholar", "Scrollkeeper", "Lightbearer", "Trobbio", "Blade Spider Hang",
+            "Crystal Drifter", "Weaver Servitor Large", "Peaks Drifter", "Slab Prisoner Fly New",
+            "First Weaver", "Phantom", "Weaver Servitor", "Bone Thumper", "Bone Goomba Bounce Fly",
+            "Dock Charger", "Dock Guard Thrower", "Tar Slug Huge", "Rhino", "Coral Goomba Large",
+            "Coral Conch Shooter Heavy", "MossBone Crawler Fat", "Giant Flea", "Pilgrim 05", "Skull King",
+            "Bone Hopper Giant", "Coral Spike Goomba", "Coral Conch Stabber", "Coral Conch Driller",
+            "Shell Fossil Mimic", "Vampire Gnat", "Silk Boss", "Swamp Mosquito Skinny", "Farmer Wisp",
+            "Wisp Pyre Effigy", "Wisp", "Crystal Drifter Giant", "Zap Core Enemy", "Coral Warrior Grey",
+            "Bone Hunter Trapper", "Roachkeeper Chef Tiny", "Roachkeeper Chef", "Song Pilgrim 02",
+            "Citadel Bat Large", "Small Crab", "Giant Centipede", "Abyss Crawler", "Gloomfly", "Gloom Beast",
+            "Abyss Crawler Large", "Void Tendrils", "Coral Goombas", "Coral Swimmer Small", "Coral Warrior",
+            "Coral Flyer Throw", "Coral Swimmer Fat", "Coral Flyer", "Coral Hunter", "Coral Big Jellyfish",
+            "Coral Brawler", "Spike Swimmer", "Coral Bubble Brute", "Poke Swimmer", "Coral King", "Seth",
+            "Flower Queen", "Bone Hunter Chief", "Hunter Queen", "Crowman Dagger Juror", "Crowman Juror",
+            "Crowman Juror Tiny", "Crawfather", "Hornet Dragonfly", "Grasshopper Slasher", "Grass Goomba",
+            "Grasshopper Fly", "Dragonfly Large", "Cloverstag", "Cloverstag White", "Grasshopper Child",
+            "Lilypad Fly", "Clover Dancer", "Lilypad Trap", "Tormented Trobbio", "Black Thread Core",
+            "Pinstress Boss", "White Palace Fly", "Garmond", "Lost Lace", "Bone Worm BlueBlood",
+            "Blue Assistant", "Bone Worm BlueTurret", "Centipede Trap", "Spike Lazy Flyer",
+            "Surface Scuttler", "Song Threaded Husk Spin", "Conductor Boss", "Song Scholar Acolyte",
+            "Song Knight", "Lifeblood Fly", "Arborium Keeper", "Coral Judge Child", "Slab Fly Small Fresh",
+            "Slab Fly Broodmother", "Maggots"
+        ]
+        for i, enemy in enumerate(enemy_names):
+            var = tk.BooleanVar(value=False)
+            self.journal_vars[enemy] = var
+            if "playerData" in self.save_data and "EnemyJournalKillData" in self.save_data["playerData"]:
+                for record in self.save_data["playerData"]["EnemyJournalKillData"]["list"]:
+                    if record["Name"] == enemy:
+                        var.set(record["Record"]["Kills"] > 0 and record["Record"]["HasBeenSeen"])
+            def toggle_kill(var_copy=var, enemy_copy=enemy):
+                if var_copy.get() and "playerData" in self.save_data and "EnemyJournalKillData" in self.save_data["playerData"]:
+                    found = False
+                    for record in self.save_data["playerData"]["EnemyJournalKillData"]["list"]:
+                        if record["Name"] == enemy_copy:
+                            record["Record"]["Kills"] = record["Record"]["Kills"] if record["Record"]["Kills"] > 0 else 1  # Auto-set to 1 for new
+                            record["Record"]["HasBeenSeen"] = True
+                            found = True
+                            break
+                    if not found:
+                        self.save_data["playerData"]["EnemyJournalKillData"]["list"].append({
+                            "Name": enemy_copy,
+                            "Record": {"Kills": 1, "HasBeenSeen": True}
+                        })
+                    self.text_view.delete(1.0, tk.END)
+                    self.text_view.insert(tk.END, json.dumps(self.save_data, indent=2))
+            var.trace('w', lambda *args, v=var, e=enemy: toggle_kill(v, e))
+            ttk.Checkbutton(self.journal_frame, text=enemy, variable=var).grid(
+                row=i // 2, column=i % 2, padx=5, pady=2, sticky=tk.W
+            )
+
+    def set_all_tools_complete(self):
+        for entry in self.add_tools_vars:
+            self.add_tools_vars[entry].set(True)
+        self.text_view.delete(1.0, tk.END)
+        self.text_view.insert(tk.END, json.dumps(self.save_data, indent=2))
+        messagebox.showinfo("Success", "All tools set to complete!")
+
+    def set_all_journal_complete(self):
+        for enemy in self.journal_vars:
+            self.journal_vars[enemy].set(True)
+        if "playerData" in self.save_data and "EnemyJournalKillData" in self.save_data["playerData"]:
+            for record in self.save_data["playerData"]["EnemyJournalKillData"]["list"]:
+                record["Record"]["Kills"] = max(record["Record"]["Kills"], 1)
+                record["Record"]["HasBeenSeen"] = True
+        self.text_view.delete(1.0, tk.END)
+        self.text_view.insert(tk.END, json.dumps(self.save_data, indent=2))
+        messagebox.showinfo("Success", "All journal entries set to complete and enemy kills marked as seen!")
+
+    def load_save(self):
+        self.filename = filedialog.askopenfilename(filetypes=[("DAT files", "*.dat"), ("JSON files", "*.json")])
+        if not self.filename:
+            return
+        try:
+            with open(self.filename, 'r', encoding='utf-8') as file:
+                self.save_data = json.load(file)
+            self.setup_ui()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load save: {str(e)}. Ensure it's a valid .dat or .json file.")
+
+    def save_changes(self):
+        try:
+            if not self.filename:
+                messagebox.showwarning("Warning", "Please load a save file first!")
+                return
+            # Update achievements (add if not present)
+            for ach in self.ach_vars:
+                full_key = f"HollowKnight.Achievement.{ach}.IsAchieved"
+                if full_key not in self.save_data:
+                    self.save_data[full_key] = "0"  # Initialize absent achievements
+                self.save_data[full_key] = "1" if self.ach_vars[ach].get() else "0"
+
+            if "playerData" in self.save_data:
+                player_data = self.save_data["playerData"]
+                # Update quests
+                for quest in self.quest_vars:
+                    player_data[quest] = self.quest_vars[quest].get()
+                # Update add tools (original journal entries)
+                for entry in self.add_tools_vars:
+                    player_data[entry] = self.add_tools_vars[entry].get()
+                # Update journal (enemy kill data)
+                if "EnemyJournalKillData" not in player_data:
+                    player_data["EnemyJournalKillData"] = {"list": []}
+                for enemy in self.journal_vars:
+                    found = False
+                    for record in player_data["EnemyJournalKillData"]["list"]:
+                        if record["Name"] == enemy:
+                            record["Record"]["Kills"] = max(record["Record"]["Kills"], 1) if self.journal_vars[enemy].get() else 0
+                            record["Record"]["HasBeenSeen"] = self.journal_vars[enemy].get()
+                            found = True
+                            break
+                    if not found and self.journal_vars[enemy].get():
+                        player_data["EnemyJournalKillData"]["list"].append({
+                            "Name": enemy,
+                            "Record": {"Kills": 1, "HasBeenSeen": True}
+                        })
+                # Update stats
+                player_data["health"] = int(self.stats_vars["health"].get())
+                player_data["maxHealth"] = int(self.stats_vars["maxHealth"].get())
+                player_data["geo"] = int(self.stats_vars["geo"].get())
+                player_data["silk"] = int(self.stats_vars["silk"].get())
+                player_data["silkMax"] = int(self.stats_vars["silkMax"].get())
+
+            base_name = os.path.splitext(self.filename)[0]
+            self.output_filename = f"{base_name}_edited.txt"
+            with open(self.output_filename, 'w', encoding='utf-8') as file:
+                json.dump(self.save_data, file, indent=2)
+            self.text_view.delete(1.0, tk.END)
+            self.text_view.insert(tk.END, json.dumps(self.save_data, indent=2))
+            messagebox.showinfo("Success", f"Save file saved as {self.output_filename}. Your original file is unchanged!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save changes: {str(e)}")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = SaveEditorGUI(root)
+    root.mainloop()
