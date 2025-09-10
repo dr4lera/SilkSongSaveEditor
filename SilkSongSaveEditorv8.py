@@ -27,6 +27,40 @@ class SaveEditorGUI:
         self.output_filename = ""
         self.enemy_kill_data = {}
         self.file_type = None
+        self.shop_items = [
+            "Grindle Rosary Magnet", "Grindle Rosary String", "Mapper Bench Map Pin", "Bellhart Crest Socket",
+            "Mapper Tube Map Pin", "Bonebottom Rosary Set", "Bellhart Furnishing Desk", "Pilgrims Rest Tool Pouch",
+            "Architect Cogwork Saw", "Grindle Tool Kit", "Mapper Greymoor Map", "Mapper Bellhart Map",
+            "City Merchant Seal Chit", "Mapper Map Marker B", "Bonebottom Faith Token",
+            "Belltown Rosary String Medium", "Mapper Coral Caverns Map", "Mapper Bellway Map Pin",
+            "Ant Merchant Shard Pouch", "Mapper Moss Grotto Map", "Belltown Spool Segment",
+            "City Merchant Spool Extender", "Pilgrims Rest Stock", "Bellhart Furnishing Lights",
+            "Bonebottom Tool Metal", "City Merchant Simple Key", "Mapper Shellwood Map", "Architect Key",
+            "City Merchant Spool Piece", "City Merchant Tool Metal", "Architect Brolly Spike", "Forge Shard Pouch",
+            "Pilgrims Rest Shard Pouch", "Forge SilkShot", "Grindle Spool Piece",
+            "Pilgrims Rest Weighted Anklet Tool", "City Merchant Wallcling Tool", "Belltown Shard Pouch",
+            "Mapper Shadow Map", "Bellhart Multibind", "Grindle Thief Claw", "Grindle Simple Key",
+            "Mapper Shop Map Pin", "Mapper Wilds Map", "Mapper Peak Map", "Architect SilkShot",
+            "Architect Shard Pouch", "Mapper Crawl Map", "Bonebottom Rosary Magnet Tool", "Belltown Tool Pouch",
+            "Mapper Quill", "Bellhart Furnishing Paint", "Mapper Map Marker C",
+            "Pilgrims Rest Rosary String Small", "Pilgrims Rest Crest Socket Unlocker", "Forgedaughter Stock",
+            "Architect Stock", "Mapper Dustpens Map", "Grindle Psalm Cylinder", "Bellhart Furnishing Gramaphone",
+            "Bonebottom Peddler Stock", "City Merchant Stock", "Mapper Map Marker A", "Mapper Hunters Nest Map",
+            "City Merchant Rosary String", "Grindle Reserve Bind", "Forge Tool Kit", "City Merchant Ward Key",
+            "Mapper JudgeSteps Map", "Grindle Stock", "Grindle Mask Shard", "Grindle Tool Metal",
+            "City Merchant Needolin Tool", "Grindle Crest Socket", "Mapper Map Marker E", "Forge Lava Charm Tool",
+            "Mapper Docks Map", "Bonebottom Mask Shard", "Grindle Thief Charm", "Architect Tool Kit",
+            "Forge Tacks Tool", "Mapper Boneforest Map", "Ant Merchant Fractured Mask Tool",
+            "Ant Merchant Curve Claws Tool", "Mapper Compass Tool", "Mapper Map Marker D", "Grindle Tool Pouch",
+            "Forge Sting Shard Tool", "Bellhart Stock", "City Merchant Heart Piece", "Bellhart Furnishing Spa",
+            "Architect Scuttlebrace", "Grindle Lucky Dice Tool"
+        ]
+        self.tool_items = [
+            "Lifeblood Syringe", "Shakra Ring", "Silk Boss Needle", "Compass"
+        ]
+        self.crest_items = [
+            "Cloakless", "Cursed", "Hunter", "Wanderer", "Warrior", "Witch"
+        ]
 
         # Initial upload prompt
         self.upload_frame = ttk.Frame(root, padding="20", style="TFrame")
@@ -55,8 +89,10 @@ class SaveEditorGUI:
         # Main content frames
         self.ach_frame = ttk.LabelFrame(self.scrollable_frame, text="Achievements", padding="10")
         self.quest_frame = ttk.LabelFrame(self.scrollable_frame, text="Quests", padding="10")
-        self.add_tools_frame = ttk.LabelFrame(self.scrollable_frame, text="Add Tools", padding="10")  # Original journal entries
-        self.journal_frame = ttk.LabelFrame(self.scrollable_frame, text="Journal", padding="10")  # New tab for enemy kill data
+        self.add_tools_frame = ttk.LabelFrame(self.scrollable_frame, text="Add Tools (Journal)", padding="10")
+        self.new_tools_frame = ttk.LabelFrame(self.scrollable_frame, text="Add Tools (Items)", padding="10")
+        self.journal_frame = ttk.LabelFrame(self.scrollable_frame, text="Journal", padding="10")
+        self.inventory_frame = ttk.LabelFrame(self.scrollable_frame, text="Inventory", padding="10")
         self.stats_frame = ttk.LabelFrame(self.scrollable_frame, text="Player Stats", padding="10")
         self.text_frame = ttk.LabelFrame(self.scrollable_frame, text="Save Data Viewer", padding="10")
         self.button_frame = ttk.Frame(self.scrollable_frame)
@@ -64,7 +100,10 @@ class SaveEditorGUI:
         self.ach_vars = {}
         self.quest_vars = {}
         self.add_tools_vars = {}
+        self.new_tools_vars = {}
         self.journal_vars = {}
+        self.inventory_vars = {item: tk.BooleanVar(value=False) for item in self.shop_items}
+        self.inventory_amounts = {item: tk.StringVar(value="0") for item in self.shop_items}
         self.stats_vars = {
             "health": tk.StringVar(value="99"),
             "maxHealth": tk.StringVar(value="99"),
@@ -98,35 +137,43 @@ class SaveEditorGUI:
             self.quest_frame.grid(row=1, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
             self.load_quests()
 
-            # Add Tools (original journal entries)
+            # Add Tools (Journal)
             self.add_tools_frame.grid(row=2, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
             self.load_add_tools()
 
-            # Journal (enemy kill data)
-            self.journal_frame.grid(row=3, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            # Add Tools (Items)
+            self.new_tools_frame.grid(row=3, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            self.load_new_tools()
+
+            # Journal
+            self.journal_frame.grid(row=4, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
             self.load_journal()
 
+            # Inventory
+            self.inventory_frame.grid(row=5, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            self.load_inventory()
+
             # Stats
-            self.stats_frame.grid(row=4, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            self.stats_frame.grid(row=6, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
             for i, (label, var) in enumerate(self.stats_vars.items()):
                 ttk.Label(self.stats_frame, text=f"{label.replace('Max', 'Max ').title()}:").grid(row=i, column=0, padx=10, pady=5, sticky=tk.E)
                 ttk.Entry(self.stats_frame, textvariable=var, width=15).grid(row=i, column=1, padx=10, pady=5, sticky=tk.W)
                 var.set(str(self.save_data.get("playerData", {}).get(label, var.get())))
 
             # Text Viewer
-            self.text_frame.grid(row=5, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+            self.text_frame.grid(row=7, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
             self.text_view = tk.Text(self.text_frame, height=10, width=70, font=("Helvetica", 9))
             self.text_view.grid(row=0, column=0, padx=5, pady=5)
             self.text_view.insert(tk.END, json.dumps(self.save_data, indent=2))
 
             # Buttons
-            self.button_frame.grid(row=6, column=0, padx=10, pady=10, sticky=(tk.E))
+            self.button_frame.grid(row=8, column=0, padx=10, pady=10, sticky=(tk.E))
             ttk.Button(self.button_frame, text="Load Save (.dat)", command=self.load_save).grid(row=0, column=0, padx=5)
             ttk.Button(self.button_frame, text="Set All Tools Complete", command=self.set_all_tools_complete).grid(row=0, column=1, padx=5)
             ttk.Button(self.button_frame, text="Set All Journal Complete", command=self.set_all_journal_complete).grid(row=0, column=2, padx=5)
             ttk.Button(self.button_frame, text="Save as New .txt", command=self.save_changes).grid(row=0, column=3, padx=5)
             ttk.Button(self.button_frame, text="Exit", command=root.quit).grid(row=0, column=4, padx=5)
-        else:  # shared.dat
+        else:
             self.text_frame.grid(row=1, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
             self.text_view = tk.Text(self.text_frame, height=10, width=70, font=("Helvetica", 9))
             self.text_view.grid(row=0, column=0, padx=5, pady=5)
@@ -175,7 +222,6 @@ class SaveEditorGUI:
             )
 
     def load_add_tools(self):
-        # Original journal entries
         journal_entries = [
             "hasJournal", "seenJournalMsg", "seenMateriumMsg", "seenJournalQuestUpdateMsg", "HasSeenMapUpdated",
             "HasSeenMapMarkerUpdated", "HasMossGrottoMap", "HasWildsMap", "HasBoneforestMap", "HasDocksMap",
@@ -193,8 +239,16 @@ class SaveEditorGUI:
                 row=i // 2, column=i % 2, padx=5, pady=2, sticky=tk.W
             )
 
+    def load_new_tools(self):
+        for i, item in enumerate(self.tool_items + self.crest_items):
+            var = tk.BooleanVar(value=False)
+            self.new_tools_vars[item] = var
+            var.set(self.save_data.get("playerData", {}).get(item, False))
+            ttk.Checkbutton(self.new_tools_frame, text=item.replace("_", " ").title(), variable=var).grid(
+                row=i // 2, column=i % 2, padx=5, pady=2, sticky=tk.W
+            )
+
     def load_journal(self):
-        # Full list of enemies from the provided example
         enemy_names = [
             "MossBone Crawler", "MossBone Fly", "Bone Roller", "Mossbone Mother", "Bone Goomba",
             "Bone Goomba Large", "Bone Flyer", "Bone Circler", "Pilgrim 03", "Pilgrim 01",
@@ -257,7 +311,7 @@ class SaveEditorGUI:
                     found = False
                     for record in self.save_data["playerData"]["EnemyJournalKillData"]["list"]:
                         if record["Name"] == enemy_copy:
-                            record["Record"]["Kills"] = record["Record"]["Kills"] if record["Record"]["Kills"] > 0 else 1  # Auto-set to 1 for new
+                            record["Record"]["Kills"] = record["Record"]["Kills"] if record["Record"]["Kills"] > 0 else 1
                             record["Record"]["HasBeenSeen"] = True
                             found = True
                             break
@@ -273,9 +327,43 @@ class SaveEditorGUI:
                 row=i // 2, column=i % 2, padx=5, pady=2, sticky=tk.W
             )
 
+    def load_inventory(self):
+        for i, item in enumerate(self.shop_items):
+            var = self.inventory_vars[item]
+            amount_var = self.inventory_amounts[item]
+            if "playerData" in self.save_data and "Collectables" in self.save_data["playerData"]:
+                for collectable in self.save_data["playerData"]["Collectables"]["savedData"]:
+                    if collectable["Name"] == item:
+                        var.set(collectable["Data"]["Amount"] > 0 and collectable["Data"]["IsSeenMask"] == 1)
+                        amount_var.set(str(collectable["Data"]["Amount"]))
+                        break
+            def update_inventory(var_copy=var, item_copy=item, amount_copy=amount_var):
+                if "playerData" in self.save_data and "Collectables" in self.save_data["playerData"]:
+                    found = False
+                    amount = max(0, min(999999, int(amount_copy.get()) if amount_copy.get().isdigit() else 0))
+                    for collectable in self.save_data["playerData"]["Collectables"]["savedData"]:
+                        if collectable["Name"] == item_copy:
+                            collectable["Data"]["Amount"] = amount if var_copy.get() else 0
+                            collectable["Data"]["IsSeenMask"] = 1 if var_copy.get() else 0
+                            collectable["Data"]["AmountWhileHidden"] = amount if var_copy.get() else 0
+                            found = True
+                            break
+                    if not found and var_copy.get():
+                        self.save_data["playerData"]["Collectables"]["savedData"].append({
+                            "Name": item_copy,
+                            "Data": {"Amount": amount, "IsSeenMask": 1, "AmountWhileHidden": amount}
+                        })
+                    self.text_view.delete(1.0, tk.END)
+                    self.text_view.insert(tk.END, json.dumps(self.save_data, indent=2))
+            var.trace('w', lambda *args, v=var, i=item, a=amount_var: update_inventory(v, i, a))
+            ttk.Checkbutton(self.inventory_frame, text=item, variable=var).grid(row=i, column=0, padx=5, pady=2, sticky=tk.W)
+            ttk.Entry(self.inventory_frame, textvariable=amount_var, width=10).grid(row=i, column=1, padx=5, pady=2, sticky=tk.W)
+
     def set_all_tools_complete(self):
         for entry in self.add_tools_vars:
             self.add_tools_vars[entry].set(True)
+        for item in self.new_tools_vars:
+            self.new_tools_vars[item].set(True)
         self.text_view.delete(1.0, tk.END)
         self.text_view.insert(tk.END, json.dumps(self.save_data, indent=2))
         messagebox.showinfo("Success", "All tools set to complete!")
@@ -311,7 +399,7 @@ class SaveEditorGUI:
             for ach in self.ach_vars:
                 full_key = f"HollowKnight.Achievement.{ach}.IsAchieved"
                 if full_key not in self.save_data:
-                    self.save_data[full_key] = "0"  # Initialize absent achievements
+                    self.save_data[full_key] = "0"
                 self.save_data[full_key] = "1" if self.ach_vars[ach].get() else "0"
 
             if "playerData" in self.save_data:
@@ -319,10 +407,13 @@ class SaveEditorGUI:
                 # Update quests
                 for quest in self.quest_vars:
                     player_data[quest] = self.quest_vars[quest].get()
-                # Update add tools (original journal entries)
+                # Update add tools
                 for entry in self.add_tools_vars:
                     player_data[entry] = self.add_tools_vars[entry].get()
-                # Update journal (enemy kill data)
+                # Update new tools
+                for item in self.new_tools_vars:
+                    player_data[item] = self.new_tools_vars[item].get()
+                # Update journal
                 if "EnemyJournalKillData" not in player_data:
                     player_data["EnemyJournalKillData"] = {"list": []}
                 for enemy in self.journal_vars:
@@ -337,6 +428,24 @@ class SaveEditorGUI:
                         player_data["EnemyJournalKillData"]["list"].append({
                             "Name": enemy,
                             "Record": {"Kills": 1, "HasBeenSeen": True}
+                        })
+                # Update inventory
+                if "Collectables" not in player_data:
+                    player_data["Collectables"] = {"savedData": []}
+                for item in self.inventory_vars:
+                    found = False
+                    amount = max(0, min(999999, int(self.inventory_amounts[item].get()) if self.inventory_amounts[item].get().isdigit() else 0))
+                    for collectable in player_data["Collectables"]["savedData"]:
+                        if collectable["Name"] == item:
+                            collectable["Data"]["Amount"] = amount if self.inventory_vars[item].get() else 0
+                            collectable["Data"]["IsSeenMask"] = 1 if self.inventory_vars[item].get() else 0
+                            collectable["Data"]["AmountWhileHidden"] = amount if self.inventory_vars[item].get() else 0
+                            found = True
+                            break
+                    if not found and self.inventory_vars[item].get():
+                        player_data["Collectables"]["savedData"].append({
+                            "Name": item,
+                            "Data": {"Amount": amount, "IsSeenMask": 1, "AmountWhileHidden": amount}
                         })
                 # Update stats
                 player_data["health"] = int(self.stats_vars["health"].get())
