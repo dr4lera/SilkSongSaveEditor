@@ -91,8 +91,19 @@ class SaveEditorGUI:
             "Forge Sting Shard Tool", "Bellhart Stock", "City Merchant Heart Piece", "Bellhart Furnishing Spa",
             "Architect Scuttlebrace", "Grindle Lucky Dice Tool"
         ]
+        # Updated tool_items to match the completed tools file
         self.tool_items = [
-            "Lifeblood Syringe", "Shakra Ring", "Silk Boss Needle", "Compass"
+            "Bone Necklace", "Silk Spear", "Compass", "Mosscreep Tool 1", "Straight Pin", "Bell Bind",
+            "Rosary Magnet", "Tri Pin", "Thread Sphere", "Flea Brew", "Harpoon", "Dead Mans Purse",
+            "Extractor", "Lifeblood Syringe", "Barbed Wire", "Poison Pouch", "Sting Shard", "Lava Charm",
+            "Weighted Anklet", "Thief Charm", "Screw Attack", "Quickbind", "Brolly Spike", "Cogwork Saw",
+            "Scuttlebrace", "Cogwork Flier", "Dazzle Bind", "Parry", "Silk Bomb", "Silk Snare",
+            "Sprintmaster", "Wallcling", "Spool Extender", "Flintstone", "Thief Claw", "Magnetite Dice",
+            "Conch Drill", "Silk Charge", "Rosary Cannon", "Pimpilo", "Maggot Charm", "Wisp Lantern",
+            "WebShot Architect", "Revenge Crystal", "Zap Imbuement", "White Ring", "Flea Charm",
+            "Multibind", "Shakra Ring", "Tack", "Musician Charm", "Dazzle Bind Upgraded",
+            "Pinstress Tool", "Silk Boss Needle", "Mosscreep Tool 2", "Curve Claws", "Fractured Mask",
+            "Longneedle", "Quick Sling", "Reserve Bind"
         ]
         self.crest_items = [
             "Cloakless", "Cursed", "Hunter", "Wanderer", "Warrior", "Witch"
@@ -279,7 +290,66 @@ class SaveEditorGUI:
         for i, item in enumerate(self.tool_items + self.crest_items):
             var = tk.BooleanVar(value=False)
             self.new_tools_vars[item] = var
-            var.set(self.save_data.get("playerData", {}).get(item, False))
+            # Check if unlocked based on Tools.savedData
+            if "playerData" in self.save_data and "Tools" in self.save_data["playerData"]:
+                for tool_entry in self.save_data["playerData"]["Tools"]["savedData"]:
+                    if tool_entry["Name"] == item:
+                        var.set(tool_entry["Data"]["IsUnlocked"])
+                        break
+            def update_tool(var_copy=var, item_copy=item):
+                if "playerData" not in self.save_data:
+                    self.save_data["playerData"] = {}
+                if "Tools" not in self.save_data["playerData"]:
+                    self.save_data["playerData"]["Tools"] = {"savedData": []}
+                if "savedData" not in self.save_data["playerData"]["Tools"]:
+                    self.save_data["playerData"]["Tools"]["savedData"] = []
+                found = False
+                if var_copy.get():
+                    # Add or update to unlocked, seen, not selected
+                    for tool_entry in self.save_data["playerData"]["Tools"]["savedData"]:
+                        if tool_entry["Name"] == item_copy:
+                            tool_entry["Data"] = {
+                                "IsUnlocked": True,
+                                "IsHidden": False,
+                                "HasBeenSeen": True,
+                                "HasBeenSelected": False,
+                                "AmountLeft": 0
+                            }
+                            found = True
+                            break
+                    if not found:
+                        self.save_data["playerData"]["Tools"]["savedData"].append({
+                            "Name": item_copy,
+                            "Data": {
+                                "IsUnlocked": True,
+                                "IsHidden": False,
+                                "HasBeenSeen": True,
+                                "HasBeenSelected": False,
+                                "AmountLeft": 0
+                            }
+                        })
+                else:
+                    # Optionally remove or set unlocked false; here we set unlocked false
+                    for tool_entry in self.save_data["playerData"]["Tools"]["savedData"]:
+                        if tool_entry["Name"] == item_copy:
+                            tool_entry["Data"]["IsUnlocked"] = False
+                            found = True
+                            break
+                    if not found:
+                        # Add as locked if not present
+                        self.save_data["playerData"]["Tools"]["savedData"].append({
+                            "Name": item_copy,
+                            "Data": {
+                                "IsUnlocked": False,
+                                "IsHidden": False,
+                                "HasBeenSeen": False,
+                                "HasBeenSelected": False,
+                                "AmountLeft": 0
+                            }
+                        })
+                self.text_view.delete(1.0, tk.END)
+                self.text_view.insert(tk.END, json.dumps(self.save_data, indent=2))
+            var.trace('w', lambda *args, v=var, i=item: update_tool(v, i))
             ttk.Checkbutton(self.new_tools_frame, text=item.replace("_", " ").title(), variable=var).grid(
                 row=i // 2, column=i % 2, padx=5, pady=2, sticky=tk.W
             )
@@ -400,9 +470,46 @@ class SaveEditorGUI:
             self.add_tools_vars[entry].set(True)
         for item in self.new_tools_vars:
             self.new_tools_vars[item].set(True)
+            # Update Tools.savedData for all tools
+            if "playerData" not in self.save_data:
+                self.save_data["playerData"] = {}
+            if "Tools" not in self.save_data["playerData"]:
+                self.save_data["playerData"]["Tools"] = {"savedData": []}
+            if "savedData" not in self.save_data["playerData"]["Tools"]:
+                self.save_data["playerData"]["Tools"]["savedData"] = []
+            for tool_entry in self.save_data["playerData"]["Tools"]["savedData"]:
+                if tool_entry["Name"] in self.new_tools_vars:
+                    tool_entry["Data"] = {
+                        "IsUnlocked": True,
+                        "IsHidden": False,
+                        "HasBeenSeen": True,
+                        "HasBeenSelected": False,
+                        "AmountLeft": 0
+                    }
+            # Add missing tools
+            for item in self.tool_items:
+                found = False
+                for tool_entry in self.save_data["playerData"]["Tools"]["savedData"]:
+                    if tool_entry["Name"] == item:
+                        found = True
+                        break
+                if not found:
+                    self.save_data["playerData"]["Tools"]["savedData"].append({
+                        "Name": item,
+                        "Data": {
+                            "IsUnlocked": True,
+                            "IsHidden": False,
+                            "HasBeenSeen": True,
+                            "HasBeenSelected": False,
+                            "AmountLeft": 0
+                        }
+                    })
+            # For crests, assume similar structure or direct playerData; here we set direct if needed
+            for crest in self.crest_items:
+                self.save_data["playerData"][crest] = True
         self.text_view.delete(1.0, tk.END)
         self.text_view.insert(tk.END, json.dumps(self.save_data, indent=2))
-        messagebox.showinfo("Success", "All tools set to complete!")
+        messagebox.showinfo("Success", "All tools set to complete with HasBeenSelected set to False!")
 
     def set_all_journal_complete(self):
         for enemy in self.journal_vars:
@@ -446,9 +553,51 @@ class SaveEditorGUI:
                 # Update add tools
                 for entry in self.add_tools_vars:
                     player_data[entry] = self.add_tools_vars[entry].get()
-                # Update new tools
+                # Update new tools with HasBeenSelected false
+                if "Tools" not in player_data:
+                    player_data["Tools"] = {"savedData": []}
+                if "savedData" not in player_data["Tools"]:
+                    player_data["Tools"]["savedData"] = []
                 for item in self.new_tools_vars:
-                    player_data[item] = self.new_tools_vars[item].get()
+                    found = False
+                    for tool_entry in player_data["Tools"]["savedData"]:
+                        if tool_entry["Name"] == item:
+                            if self.new_tools_vars[item].get():
+                                tool_entry["Data"] = {
+                                    "IsUnlocked": True,
+                                    "IsHidden": False,
+                                    "HasBeenSeen": True,
+                                    "HasBeenSelected": False,
+                                    "AmountLeft": 0
+                                }
+                            else:
+                                tool_entry["Data"]["IsUnlocked"] = False
+                                tool_entry["Data"]["HasBeenSeen"] = False
+                            found = True
+                            break
+                    if not found:
+                        if self.new_tools_vars[item].get():
+                            player_data["Tools"]["savedData"].append({
+                                "Name": item,
+                                "Data": {
+                                    "IsUnlocked": True,
+                                    "IsHidden": False,
+                                    "HasBeenSeen": True,
+                                    "HasBeenSelected": False,
+                                    "AmountLeft": 0
+                                }
+                            })
+                        else:
+                            player_data["Tools"]["savedData"].append({
+                                "Name": item,
+                                "Data": {
+                                    "IsUnlocked": False,
+                                    "IsHidden": False,
+                                    "HasBeenSeen": False,
+                                    "HasBeenSelected": False,
+                                    "AmountLeft": 0
+                                }
+                            })
                 # Update journal
                 if "EnemyJournalKillData" not in player_data:
                     player_data["EnemyJournalKillData"] = {"list": []}
