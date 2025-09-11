@@ -9,18 +9,54 @@ class SaveEditorGUI:
         self.root = root
         self.root.title("Silk Song Save Editor")
         self.root.geometry("700x1100")
-        self.root.configure(bg="#4a4a4a")  # Dark gray background
+        self.root.configure(bg="#4a4a4a")  
 
-        # Style configuration for modern design
+           
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("TLabel", font=("Helvetica", 10), padding=5)
-        style.configure("TCheckbutton", font=("Helvetica", 9), padding=2)
-        style.configure("TButton", font=("Helvetica", 10, "bold"), padding=8)
-        style.configure("TFrame", background="#f0f0f0")  # Frames remain light gray
-        style.configure("TNotebook", background="#f0f0f0")
-        style.configure("TLabelFrame", background="#f0f0f0", font=("Helvetica", 11, "bold"))
 
+        
+        bg_dark = "#d9d9d9"       
+        bg_panel = "#d9d9d9"      
+        accent_gold = "#d4af37"    
+        accent_silk = "#913636"   
+        accent_red = "#5a1a1a"     
+        silkred = "#913636"
+
+        self.root.configure(bg=bg_dark)
+
+        # Global widget styles (cleaner, less boxy)
+        style.configure("TFrame", background=bg_panel, relief="flat")
+        style.configure("TLabel", background=bg_panel, foreground=accent_silk,
+                        font=("Garamond", 11), padding=5)
+        style.configure("TLabelFrame", background=silkred, foreground=accent_gold,
+                        font=("Garamond", 12, "bold"), relief="groove", borderwidth=1)  # Subtle groove for less "ugly box"
+        style.configure("TLabelFrame.Label", foreground=accent_gold, background=bg_panel)  # Ensure gold on labels
+        style.configure("TCheckbutton", background=bg_panel, foreground=accent_silk,
+                        font=("Garamond", 10), padding=3, relief="flat")
+        style.configure("TButton", background=bg_panel, foreground=accent_silk,  # Darker button bg for subtlety
+                        font=("Garamond", 11, "bold"), padding=8, borderwidth=1,
+                        relief="flat")  # Flat for clean look
+        style.map("TButton",
+                  background=[("active", accent_red)],
+                  foreground=[("active", accent_silk)],
+                  bordercolor=[("active", silkred)])  # Gold border on hover for visibility
+
+        # Entry fields (for stats/inventory) - clean and subtle
+        style.configure("TEntry", fieldbackground=bg_dark, foreground=accent_silk,
+                        insertcolor=accent_gold, borderwidth=1, relief="flat")
+
+        # Notebook/tab style if used
+        style.configure("TNotebook", background=bg_dark)
+        style.configure("TNotebook.Tab", background=bg_panel, foreground=accent_silk,
+                        font=("Garamond", 11, "bold"), padding=[10, 4])
+        style.map("TNotebook.Tab",
+                  background=[("selected", accent_gold)],
+                  foreground=[("selected", bg_dark)])
+
+        # Scrollbar for cohesion
+        style.configure("Vertical.TScrollbar", background=bg_panel, troughcolor=bg_dark,
+                        borderwidth=0, arrowcolor=accent_silk)
         # Variables
         self.save_data = {}
         self.filename = ""
