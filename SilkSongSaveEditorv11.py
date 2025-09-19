@@ -11,11 +11,9 @@ class SaveEditorGUI:
         self.root.geometry("700x1100")
         self.root.configure(bg="#4a4a4a")  
 
-           
         style = ttk.Style()
         style.theme_use("clam")
 
-        
         bg_dark = "#d9d9d9"       
         bg_panel = "#d9d9d9"      
         accent_gold = "#d4af37"    
@@ -30,17 +28,17 @@ class SaveEditorGUI:
         style.configure("TLabel", background=bg_panel, foreground=accent_silk,
                         font=("Garamond", 11), padding=5)
         style.configure("TLabelFrame", background=silkred, foreground=accent_gold,
-                        font=("Garamond", 12, "bold"), relief="groove", borderwidth=1)  # Subtle groove for less "ugly box"
-        style.configure("TLabelFrame.Label", foreground=accent_gold, background=bg_panel)  # Ensure gold on labels
+                        font=("Garamond", 12, "bold"), relief="groove", borderwidth=1)
+        style.configure("TLabelFrame.Label", foreground=accent_gold, background=bg_panel)
         style.configure("TCheckbutton", background=bg_panel, foreground=accent_silk,
                         font=("Garamond", 10), padding=3, relief="flat")
-        style.configure("TButton", background=bg_panel, foreground=accent_silk,  # Darker button bg for subtlety
+        style.configure("TButton", background=bg_panel, foreground=accent_silk,
                         font=("Garamond", 11, "bold"), padding=8, borderwidth=1,
-                        relief="flat")  # Flat for clean look
+                        relief="flat")
         style.map("TButton",
                   background=[("active", accent_red)],
                   foreground=[("active", accent_silk)],
-                  bordercolor=[("active", silkred)])  # Gold border on hover for visibility
+                  bordercolor=[("active", silkred)])
 
         # Entry fields (for stats/inventory) - clean and subtle
         style.configure("TEntry", fieldbackground=bg_dark, foreground=accent_silk,
@@ -57,6 +55,7 @@ class SaveEditorGUI:
         # Scrollbar for cohesion
         style.configure("Vertical.TScrollbar", background=bg_panel, troughcolor=bg_dark,
                         borderwidth=0, arrowcolor=accent_silk)
+
         # Variables
         self.save_data = {}
         self.filename = ""
@@ -91,7 +90,6 @@ class SaveEditorGUI:
             "Forge Sting Shard Tool", "Bellhart Stock", "City Merchant Heart Piece", "Bellhart Furnishing Spa",
             "Architect Scuttlebrace", "Grindle Lucky Dice Tool"
         ]
-        # Updated tool_items to match the completed tools file
         self.tool_items = [
             "Bone Necklace", "Silk Spear", "Compass", "Mosscreep Tool 1", "Straight Pin", "Bell Bind",
             "Rosary Magnet", "Tri Pin", "Thread Sphere", "Flea Brew", "Harpoon", "Dead Mans Purse",
@@ -219,7 +217,7 @@ class SaveEditorGUI:
             ttk.Button(self.button_frame, text="Set All Tools Complete", command=self.set_all_tools_complete).grid(row=0, column=1, padx=5)
             ttk.Button(self.button_frame, text="Set All Journal Complete", command=self.set_all_journal_complete).grid(row=0, column=2, padx=5)
             ttk.Button(self.button_frame, text="Save as New .txt", command=self.save_changes).grid(row=0, column=3, padx=5)
-            ttk.Button(self.button_frame, text="Exit", command=root.quit).grid(row=0, column=4, padx=5)
+            ttk.Button(self.button_frame, text="Exit", command=self.root.quit).grid(row=0, column=4, padx=5)
         else:
             self.text_frame.grid(row=1, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
             self.text_view = tk.Text(self.text_frame, height=10, width=70, font=("Helvetica", 9))
@@ -290,7 +288,6 @@ class SaveEditorGUI:
         for i, item in enumerate(self.tool_items + self.crest_items):
             var = tk.BooleanVar(value=False)
             self.new_tools_vars[item] = var
-            # Check if unlocked based on Tools.savedData
             if "playerData" in self.save_data and "Tools" in self.save_data["playerData"]:
                 for tool_entry in self.save_data["playerData"]["Tools"]["savedData"]:
                     if tool_entry["Name"] == item:
@@ -305,7 +302,6 @@ class SaveEditorGUI:
                     self.save_data["playerData"]["Tools"]["savedData"] = []
                 found = False
                 if var_copy.get():
-                    # Add or update to unlocked, seen, not selected
                     for tool_entry in self.save_data["playerData"]["Tools"]["savedData"]:
                         if tool_entry["Name"] == item_copy:
                             tool_entry["Data"] = {
@@ -329,14 +325,12 @@ class SaveEditorGUI:
                             }
                         })
                 else:
-                    # Optionally remove or set unlocked false; here we set unlocked false
                     for tool_entry in self.save_data["playerData"]["Tools"]["savedData"]:
                         if tool_entry["Name"] == item_copy:
                             tool_entry["Data"]["IsUnlocked"] = False
                             found = True
                             break
                     if not found:
-                        # Add as locked if not present
                         self.save_data["playerData"]["Tools"]["savedData"].append({
                             "Name": item_copy,
                             "Data": {
@@ -403,7 +397,7 @@ class SaveEditorGUI:
             "Blue Assistant", "Bone Worm BlueTurret", "Centipede Trap", "Spike Lazy Flyer",
             "Surface Scuttler", "Song Threaded Husk Spin", "Conductor Boss", "Song Scholar Acolyte",
             "Song Knight", "Lifeblood Fly", "Arborium Keeper", "Coral Judge Child", "Slab Fly Small Fresh",
-            "Slab Fly Broodmother", "Maggots"
+            "Slab Fly Broodmother", "Maggots", "Sand Centipede"
         ]
         for i, enemy in enumerate(enemy_names):
             var = tk.BooleanVar(value=False)
@@ -470,7 +464,6 @@ class SaveEditorGUI:
             self.add_tools_vars[entry].set(True)
         for item in self.new_tools_vars:
             self.new_tools_vars[item].set(True)
-            # Update Tools.savedData for all tools
             if "playerData" not in self.save_data:
                 self.save_data["playerData"] = {}
             if "Tools" not in self.save_data["playerData"]:
@@ -486,7 +479,6 @@ class SaveEditorGUI:
                         "HasBeenSelected": False,
                         "AmountLeft": 0
                     }
-            # Add missing tools
             for item in self.tool_items:
                 found = False
                 for tool_entry in self.save_data["playerData"]["Tools"]["savedData"]:
@@ -504,7 +496,6 @@ class SaveEditorGUI:
                             "AmountLeft": 0
                         }
                     })
-            # For crests, assume similar structure or direct playerData; here we set direct if needed
             for crest in self.crest_items:
                 self.save_data["playerData"][crest] = True
         self.text_view.delete(1.0, tk.END)
@@ -538,7 +529,6 @@ class SaveEditorGUI:
             if not self.filename:
                 messagebox.showwarning("Warning", "Please load a save file first!")
                 return
-            # Update achievements (add if not present)
             for ach in self.ach_vars:
                 full_key = f"HollowKnight.Achievement.{ach}.IsAchieved"
                 if full_key not in self.save_data:
@@ -547,13 +537,10 @@ class SaveEditorGUI:
 
             if "playerData" in self.save_data:
                 player_data = self.save_data["playerData"]
-                # Update quests
                 for quest in self.quest_vars:
                     player_data[quest] = self.quest_vars[quest].get()
-                # Update add tools
                 for entry in self.add_tools_vars:
                     player_data[entry] = self.add_tools_vars[entry].get()
-                # Update new tools with HasBeenSelected false
                 if "Tools" not in player_data:
                     player_data["Tools"] = {"savedData": []}
                 if "savedData" not in player_data["Tools"]:
@@ -598,7 +585,6 @@ class SaveEditorGUI:
                                     "AmountLeft": 0
                                 }
                             })
-                # Update journal
                 if "EnemyJournalKillData" not in player_data:
                     player_data["EnemyJournalKillData"] = {"list": []}
                 for enemy in self.journal_vars:
@@ -614,7 +600,6 @@ class SaveEditorGUI:
                             "Name": enemy,
                             "Record": {"Kills": 1, "HasBeenSeen": True}
                         })
-                # Update inventory
                 if "Collectables" not in player_data:
                     player_data["Collectables"] = {"savedData": []}
                 for item in self.inventory_vars:
@@ -632,7 +617,6 @@ class SaveEditorGUI:
                             "Name": item,
                             "Data": {"Amount": amount, "IsSeenMask": 1, "AmountWhileHidden": amount}
                         })
-                # Update stats
                 player_data["health"] = int(self.stats_vars["health"].get())
                 player_data["maxHealth"] = int(self.stats_vars["maxHealth"].get())
                 player_data["geo"] = int(self.stats_vars["geo"].get())
